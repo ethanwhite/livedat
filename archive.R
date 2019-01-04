@@ -12,7 +12,6 @@ config <- yaml::yaml.load_file("config.yml")
 
 repo <- git2r::repository(".")
 repo_url <- paste("https://github.com/", config$repo, ".git", sep = "")
-git2r::checkout(repo, branch = "master")
 git2r::remote_add(repo, name = "deploy", url = repo_url)
 cred <- git2r::cred_token("GITHUB_TOKEN")
 
@@ -24,23 +23,27 @@ git2r::config(repo,
 # Check the most recent commit for version instructions 
 last_commit <- git2r::commits(repo)[[1]]
 current_ver <- semver::parse_version(readLines("version.txt"))
-if (grepl("Merge pull request", last_commit@summary)){
+if (grepl("Merge pull request", last_commit['summary'])){
     last_commit <- git2r::commits(repo)[[2]]
 }
+print(current_ver)
+print(last_commit)
 
-if (grepl("\\[no version bump\\]", last_commit@summary)) {
+if (grepl("\\[no version bump\\]", last_commit['summary'])) {
   new_ver <- current_ver
-} else if (grepl("\\[major\\]", last_commit@summary)) {
+} else if (grepl("\\[major\\]", last_commit['summary'])) {
   new_ver <- semver::increment_version(current_ver, "major", 1L)
-} else if (grepl("\\[patch\\]", last_commit@summary)) {
+} else if (grepl("\\[patch\\]", last_commit['summary'])) {
   new_ver <- semver::increment_version(current_ver, "patch", 1L)
 } else {
   new_ver <- semver::increment_version(current_ver, "minor", 1L)
 }
+print(new_ver)
 
 writeLines(as.character(new_ver), "version.txt")
 
 travis_build <- Sys.getenv("TRAVIS_BUILD_NUMBER")
+git2r::checkout(repo, branch = "master")
 commit_message <- paste("Update data and trigger archive: Travis Build",
                         travis_build,
                         "[skip ci]")
